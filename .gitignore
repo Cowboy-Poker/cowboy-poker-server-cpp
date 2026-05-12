@@ -39,3 +39,19 @@
 
 # debug information files
 *.dwo
+
+# --- Visual Studio 추가 항목 ---
+.vs/
+[Xx]64/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.vsidx
+*.opendb
+*.db
+
+# --- MSBuild/로그 관련 ---
+*.tlog
+*.log
+*.lastbuildstate
