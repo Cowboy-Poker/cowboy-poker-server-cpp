@@ -2,6 +2,7 @@
 #include "ThreadManager.h"
 #include "UdpGameSession.h"
 #include "UdpService.h"
+#include "UdpServerPacketHandler.h"
 
 int main()
 {
@@ -36,7 +37,9 @@ int main()
 
 	while (true)
 	{
-		udpService->Tick();
+		Vector<uint64> left = udpService->Tick();
+		for (uint64 id : left)
+			UdpServerPacketHandler::OnClientLeave(udpService, id);
 		this_thread::sleep_for(1000ms);
 	}
 

@@ -114,11 +114,18 @@ void UdpService::Broadcast(SendBufferRef sendBuffer) {
     _udpSession->SendTo(kv.second->addr, sendBuffer);
 }
 
+void UdpService::BroadcastExcept(uint64 excludeSessionId, SendBufferRef sendBuffer) {
+  READ_LOCK;
+  for (auto& kv : _idMap)
+    if (kv.first != excludeSessionId)
+      _udpSession->SendTo(kv.second->addr, sendBuffer);
+}
+
 /*----------------------------------------------------
     타임아웃 정리 (메인 루프에서 주기적으로 호출)
 ----------------------------------------------------*/
 
-void UdpService::Tick() {
+Vector<uint64> UdpService::Tick() {
   int64 now = static_cast<int64>(::GetTickCount64());
 
   Vector<uint64> expired;
@@ -133,6 +140,8 @@ void UdpService::Tick() {
     cout << "UdpService: session timeout, removing " << id << endl;
     RemoveClient(id);
   }
+
+  return expired; // 호출자(GameServer)가 퇴장 패킷 전송 담당
 }
 
 /*----------------------------------------------------

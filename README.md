@@ -108,17 +108,41 @@ cowboy-poker-server-cpp/
 - [x] IOCP + 단일 UDP 소켓 (`UdpSession` / `UdpService`)
 - [x] `WSARecvFrom` 비동기 수신, 완료 시 `Dispatch` → 핸들러
 - [x] `WSASendTo` 동기 송신 (데이터그램 단위, 구조 단순화)
-- [x] 세션 타임아웃(`Tick`) 및 `sessionId` 발급·맵 조회
-- [x] `UdpServerPacketHandler`: `C_UDP_HELLO` / `S_UDP_HANDSHAKE_ACK` 처리
-- [x] 프로토콜 ID·로비 proto는 `protocols` 서브모듈과 동기화
+- [x] 세션 타임아웃(`Tick`, 10초) 및 `sessionId` 발급·맵 조회
+- [x] 핸드셰이크: `C_UDP_HELLO` (300) → `S_UDP_HANDSHAKE_ACK` (350)
+- [x] 로비 이동 동기화: `C_LOBBY_MOVE` (301) → `S_LOBBY_PLAYER_MOVE` (352) 브로드캐스트
+  - payload: `[posX:f32][posY:f32][posZ:f32][rot:f32][animState:u8]`
+  - `animState` bitmask: `0x01` 점프 중, `0x02` 조준 중
+- [x] 하트비트: `C_LOBBY_HEARTBEAT` (302) → `lastAliveMs` 갱신
+- [x] 퇴장 브로드캐스트: 타임아웃 감지 시 `S_LOBBY_PLAYER_LEAVE` (353) 전체 전송
+- [x] 클라 종료 시 10054 (WSAECONNRESET) 무시 — 수신 루프 유지
+- [x] 이동 패킷 직렬화: raw binary (`BufferReader` / `BufferWriter`), Protobuf 미사용
 
 ### 예정 / 확장
 
-- [ ] 로비 이동·하트비트 등 추가 UDP 패킷 처리 (`C_LOBBY_MOVE` 등)
+#### 기능
 - [ ] 전투 씬 UDP 패킷 및 서버 권위 검증
-- [ ] 신뢰 채널(재전송)·암호화·스푸핑 방지
-- [ ] Protobuf 직렬화와 C++ 핸들러 연동
+- [ ] 신뢰 채널 (재전송 로직) — 중요 이벤트 패킷용
+- [ ] 암호화 및 스푸핑 방지
+- [ ] Protobuf 직렬화 도입 — 현재 raw binary 방식을 점진적으로 전환
 - [ ] 운영 로그·메트릭
+
+#### 성능 — 멀티스레드 활용 개선
+현재 구조는 UDP 소켓이 1개이므로 수신·처리·송신 모두 사실상 단일 스레드로 동작한다.
+동접자 수가 늘어날 경우 아래 순서로 개선을 고려한다.
+
+1. **수신-처리 분리** (우선순위 높음)
+   - 수신 전용 스레드가 패킷을 `ConcurrentQueue`에 push 후 즉시 `RegisterRecv` 재등록
+   - 워커 스레드 N개가 큐에서 pop → `HandlePacket` 처리
+   - 패킷 폭주 시 수신 루프가 블로킹되지 않아 처리 지연 감소
+
+2. **비동기 송신** (중간 규모 이상)
+   - `WSASendTo`를 OVERLAPPED로 전환해 송신을 OS에 위임
+   - 브로드캐스트 대상이 많을수록 효과적
+
+3. **소켓 샤딩** (대규모)
+   - 스레드당 UDP 소켓 1개, `sessionId % N`으로 담당 스레드 결정
+   - 수신도 병렬화 가능 — 가장 높은 처리량 확보
 
 ---
 

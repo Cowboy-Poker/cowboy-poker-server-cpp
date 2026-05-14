@@ -83,9 +83,12 @@ void UdpSession::RegisterRecv()
         int32 err = ::WSAGetLastError();
         if (err != WSA_IO_PENDING)
         {
-            cout << "UdpSession RecvFrom error: " << err << endl;
+            // 10054 (WSAECONNRESET): 클라이언트가 종료될 때 Windows가 올려보내는 ICMP 에러.
+            // UDP는 비연결이므로 소켓을 죽이지 말고 루프를 재등록해서 계속 수신.
             _recvEvent.owner = nullptr;
-            return;
+            if (err != WSAECONNRESET)
+                cout << "UdpSession RecvFrom error: " << err << endl;
+            RegisterRecv();
         }
     }
 }
@@ -94,6 +97,8 @@ void UdpSession::ProcessRecv(int32 numOfBytes)
 {
     _recvEvent.owner = nullptr;
 
+    // numOfBytes == 0 이면 ICMP Port Unreachable(10054) 같은 에러 완료 통보.
+    // 패킷 처리는 건너뛰고 바로 재등록해서 수신 루프를 유지.
     if (numOfBytes >= static_cast<int32>(sizeof(UdpPacketHeader)))
         OnRecvPacket(_recvFromAddr, _recvBuf, numOfBytes);
 
