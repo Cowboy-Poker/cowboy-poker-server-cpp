@@ -21,6 +21,8 @@ using ListenerRef = std::shared_ptr<class Listener>;
 using ServerServiceRef = std::shared_ptr<class ServerService>;
 using ClientServiceRef = std::shared_ptr<class ClientService>;
 using SendBufferRef = std::shared_ptr<class SendBuffer>;
+using UdpSessionRef = std::shared_ptr<class UdpSession>;
+using UdpServiceRef = std::shared_ptr<class UdpService>;
 
 template <typename T>
 using Atomic = std::atomic<T>;

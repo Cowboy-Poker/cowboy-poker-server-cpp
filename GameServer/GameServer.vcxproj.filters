@@ -24,6 +24,12 @@
     <ClCompile Include="ServerPacketHandler.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="UdpGameSession.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="UdpServerPacketHandler.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -36,6 +42,12 @@
       <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="ServerPacketHandler.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="UdpGameSession.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="UdpServerPacketHandler.h">
       <Filter>Main</Filter>
     </ClInclude>
   </ItemGroup>

@@ -90,6 +90,12 @@
     <ClInclude Include="BufferWriter.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="UdpService.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="UdpSession.h">
+      <Filter>Network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CorePch.cpp">
@@ -154,6 +160,12 @@
     </ClCompile>
     <ClCompile Include="BufferWriter.cpp">
       <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="UdpService.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="UdpSession.cpp">
+      <Filter>Network</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
