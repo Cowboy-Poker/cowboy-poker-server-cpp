@@ -8,5 +8,4 @@
 #pragma comment(lib, "Release\\ServerCore.lib")
 #endif
 
-#include "CorePch.h"
-#include "../protocols/packetTypes/packetTypes.h"
+#include "CorePch.h" 

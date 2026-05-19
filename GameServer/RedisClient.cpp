@@ -63,3 +63,42 @@ bool RedisClient::GetPlayerInfo(const std::string& userId, PlayerRedisInfo& outI
     freeReplyObject(reply);
     return true;
 }
+
+bool RedisClient::GetBalance(const std::string& userId, int64& outBalance) {
+    if (!IsConnected()) return false;
+    std::string key = "user:" + userId;
+    redisReply* reply = reinterpret_cast<redisReply*>(
+        redisCommand(_ctx, "HGET %s balance", key.c_str()));
+    if (!reply || reply->type != REDIS_REPLY_STRING) {
+        if (reply) freeReplyObject(reply);
+        return false;
+    }
+    outBalance = stoll(reply->str);
+    freeReplyObject(reply);
+    return true;
+}
+
+bool RedisClient::PurchaseWeapon(const std::string& userId, int64 newBalance, int32 weaponType) {
+    if (!IsConnected()) return false;
+    std::string key = "user:" + userId;
+    std::string balanceStr = std::to_string(newBalance);
+    std::string weaponStr = std::to_string(weaponType);
+
+    // balance 갱신
+    redisReply* r1 = reinterpret_cast<redisReply*>(
+        redisCommand(_ctx, "HSET %s balance %s", key.c_str(), balanceStr.c_str()));
+    if (!r1) return false;
+    if (r1->type == REDIS_REPLY_ERROR)
+        cout << "[Redis] HSET balance error: " << r1->str << endl;
+    freeReplyObject(r1);
+
+    // weapon 갱신
+    redisReply* r2 = reinterpret_cast<redisReply*>(
+        redisCommand(_ctx, "HSET %s weapon %s", key.c_str(), weaponStr.c_str()));
+    if (!r2) return false;
+    if (r2->type == REDIS_REPLY_ERROR)
+        cout << "[Redis] HSET weapon error: " << r2->str << endl;
+    freeReplyObject(r2);
+
+    return true;
+}

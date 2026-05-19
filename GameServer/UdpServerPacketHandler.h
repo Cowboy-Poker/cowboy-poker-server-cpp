@@ -50,6 +50,13 @@ private:
     static SendBufferRef Make_S_PLAYER_INFO(uint64 sessionId,
         const PlayerRedisInfo& info);
 
+    static void Handle_C_BUY_WEAPON(std::shared_ptr<UdpService> service,
+        UdpClientContextRef ctx,
+        BYTE* payload, int32 payloadLen);
+
+    static SendBufferRef Make_S_BUY_WEAPON_RESULT(uint64 sessionId, bool success,
+        int32 weaponType, int64 balance);
+
 public:
     /* UdpService onClientLeave 콜백으로 등록 */
     static void OnClientLeave(std::shared_ptr<UdpService> service, uint64 sessionId);

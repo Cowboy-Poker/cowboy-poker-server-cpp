@@ -56,5 +56,11 @@
     <ClInclude Include="UdpServerPacketHandler.h">
       <Filter>Main</Filter>
     </ClInclude>
+    <ClInclude Include="WeaponData.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="packetTypes.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

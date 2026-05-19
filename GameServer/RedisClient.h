@@ -41,6 +41,12 @@ public:
     // 실패 시 false 반환
     bool GetPlayerInfo(const std::string& userId, PlayerRedisInfo& outInfo);
 
+    // balance 조회
+    bool GetBalance(const std::string& userId, int64& outBalance);
+
+    // balance 차감 + weapon 갱신 (원자적 HSET 2개)
+    bool PurchaseWeapon(const std::string& userId, int64 newBalance, int32 weaponType);
+
 private:
     struct redisContext* _ctx = nullptr;
 };

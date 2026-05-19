@@ -1,7 +1,9 @@
 ﻿#include "pch.h"
+#include "packetTypes.h"
 #include "BufferReader.h"
 #include "BufferWriter.h"
 #include "RedisClient.h"
+#include "WeaponData.h"
 #include "UdpServerPacketHandler.h"
 extern RedisClient GRedisClient;
 
@@ -31,7 +33,9 @@ void UdpServerPacketHandler::HandlePacket(std::shared_ptr<UdpService> service,
         Handle_C_LOBBY_HEARTBEAT(ctx);
         break;
 
-
+    case PacketType::C_PURCHASE_WEAPON:
+        Handle_C_BUY_WEAPON(service, ctx, payload, payloadLen);
+        break;
 
     default:
         break;
@@ -204,6 +208,87 @@ SendBufferRef UdpServerPacketHandler::Make_S_PLAYER_INFO(
     header->sessionId = sessionId;
     header->sequence = 0;
     header->id = static_cast<uint16>(PacketType::S_PLAYER_INFO);
+
+    buf->SetWriteSize(bw.WriteSize());
+    return buf;
+}
+
+void UdpServerPacketHandler::Handle_C_BUY_WEAPON(
+    std::shared_ptr<UdpService> service, UdpClientContextRef ctx,
+    BYTE* payload, int32 payloadLen) {
+
+    if (payloadLen < 6) return; // userIdLen(2) + min userId(1) + weaponType(4) 최소
+
+    BufferReader br(payload, static_cast<uint32>(payloadLen));
+
+    uint16 userIdLen = 0;
+    br >> userIdLen;
+    if (br.FreeSize() < userIdLen + 4) return;
+
+    std::string userId(reinterpret_cast<const char*>(payload + 2), userIdLen);
+    BYTE* afterUserId = payload + 2 + userIdLen;
+    int32 weaponType = *reinterpret_cast<int32*>(afterUserId);
+
+    // 1. 총기 데이터 조회
+    const WeaponInfo* weapon = FindWeapon(weaponType);
+    if (!weapon) {
+        cout << "BUY_WEAPON: invalid weaponType=" << weaponType << endl;
+        SendBufferRef buf = Make_S_BUY_WEAPON_RESULT(ctx->sessionId, false, weaponType, 0);
+        service->SendTo(ctx->sessionId, buf);
+        return;
+    }
+
+    // 2. Redis balance 조회
+    int64 balance = 0;
+    if (!GRedisClient.GetBalance(userId, balance)) {
+        cout << "BUY_WEAPON: Redis GetBalance failed userId=" << userId << endl;
+        SendBufferRef buf = Make_S_BUY_WEAPON_RESULT(ctx->sessionId, false, weaponType, 0);
+        service->SendTo(ctx->sessionId, buf);
+        return;
+    }
+
+    // 3. 잔액 비교
+    if (balance < weapon->price) {
+        cout << "BUY_WEAPON: insufficient balance userId=" << userId
+            << " balance=" << balance << " price=" << weapon->price << endl;
+        SendBufferRef buf = Make_S_BUY_WEAPON_RESULT(ctx->sessionId, false, weaponType, balance);
+        service->SendTo(ctx->sessionId, buf);
+        return;
+    }
+
+    // 4. Redis 차감 + weapon 갱신
+    int64 newBalance = balance - weapon->price;
+    if (!GRedisClient.PurchaseWeapon(userId, newBalance, weaponType)) {
+        cout << "BUY_WEAPON: Redis PurchaseWeapon failed userId=" << userId << endl;
+        SendBufferRef buf = Make_S_BUY_WEAPON_RESULT(ctx->sessionId, false, weaponType, balance);
+        service->SendTo(ctx->sessionId, buf);
+        return;
+    }
+
+    // 5. 성공 응답
+    cout << "BUY_WEAPON: success userId=" << userId
+        << " weapon=" << weaponType << " newBalance=" << newBalance << endl;
+    SendBufferRef buf = Make_S_BUY_WEAPON_RESULT(ctx->sessionId, true, weaponType, newBalance);
+    service->SendTo(ctx->sessionId, buf);
+}
+
+// S_BUY_WEAPON_RESULT payload:
+// [sessionId:u64][success:u8][weaponType:i32][balance:i64] = 21바이트
+SendBufferRef UdpServerPacketHandler::Make_S_BUY_WEAPON_RESULT(
+    uint64 sessionId, bool success, int32 weaponType, int64 balance) {
+
+    SendBufferRef buf = MakeShared<SendBuffer>(UDP_MAX_PACKET);
+    BufferWriter  bw(buf->Buffer(), buf->AllocSize());
+
+    UdpPacketHeader* header = bw.Reserve<UdpPacketHeader>();
+    bw << sessionId;
+    bw << (BYTE)(success ? 1 : 0);
+    bw << weaponType;
+    bw << balance;
+
+    header->sessionId = sessionId;
+    header->sequence = 0;
+    header->id = static_cast<uint16>(PacketType::S_PURCHASE_WEAPON_RESULT);
 
     buf->SetWriteSize(bw.WriteSize());
     return buf;
