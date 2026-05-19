@@ -14,6 +14,7 @@ struct UdpClientContext {
     SOCKADDR_IN addr = {};
     uint32 lastSeq = 0;    // 마지막으로 처리한 수신 sequence
     int64 lastAliveMs = 0; // 마지막 패킷 수신 시각 (GetTickCount64)
+    std::string userId; // C_UDP_HELLO 페이로드에서 수신한 유저 ID
 };
 
 using UdpClientContextRef = shared_ptr<UdpClientContext>;

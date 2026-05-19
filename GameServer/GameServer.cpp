@@ -3,9 +3,14 @@
 #include "UdpGameSession.h"
 #include "UdpService.h"
 #include "UdpServerPacketHandler.h"
+#include "RedisClient.h"
+RedisClient GRedisClient;
 
 int main()
 {
+	if (!GRedisClient.Connect("127.0.0.1", 6379)) {
+		cout << "Redis connection failed! Continuing without Redis.\n";
+	}
 	string address = "0.0.0.0";
 	std::wstring waddress(address.begin(), address.end());
 

@@ -30,6 +30,9 @@
     <ClCompile Include="UdpServerPacketHandler.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="RedisClient.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -46,6 +49,9 @@
     </ClInclude>
     <ClInclude Include="UdpGameSession.h">
       <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="RedisClient.h">
+      <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="UdpServerPacketHandler.h">
       <Filter>Main</Filter>

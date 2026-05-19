@@ -46,12 +46,8 @@ T* BufferWriter::Reserve() {
 
 template <typename T>
 BufferWriter& BufferWriter::operator<<(T&& src) {
-	using DataType=std::remove_reference_t<T>;
-	// Type에서 reference를 빼는 명령어
-	// const int& -> const int
-	*reinterpret_cast<DataType*>(&_buffer[_pos]) = std::forward<DataType>(src);
-	// 참조에 대한 포인터는 존재할 수 없음
-	// 원래 코드에선 reinterPret_cast<uint32&*> 이런식으로 들어가서 에러가 남
-	_pos += sizeof(T);
+	using DataType = std::remove_cv_t<std::remove_reference_t<T>>;
+	*reinterpret_cast<DataType*>(&_buffer[_pos]) = static_cast<DataType>(src);
+	_pos += sizeof(DataType);
 	return *this;
 }
