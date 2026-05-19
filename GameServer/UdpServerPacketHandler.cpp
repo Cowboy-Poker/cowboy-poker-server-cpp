@@ -92,7 +92,7 @@ void UdpServerPacketHandler::Handle_C_LOBBY_MOVE(
   BYTE animState;
   br >> posX >> posY >> posZ >> rot >> animState;
 
-  SendBufferRef buf = Make_S_LOBBY_PLAYER_MOVE(ctx->sessionId, posX, posY, posZ, rot, animState);
+  SendBufferRef buf = Make_S_LOBBY_PLAYER_MOVE(ctx->sessionId, ctx->userId, posX, posY, posZ, rot, animState);
   service->BroadcastExcept(ctx->sessionId, buf);
 }
 
@@ -153,13 +153,17 @@ SendBufferRef UdpServerPacketHandler::Make_S_LOBBY_PLAYER_LEAVE(uint64 leftSessi
 // S_LOBBY_PLAYER_MOVE payload:
 // [moverSessionId:u64][posX:f32][posY:f32][posZ:f32][rot:f32][animState:u8] = 25바이트
 // animState bitmask: 0x01=점프중  0x02=조준중
-SendBufferRef UdpServerPacketHandler::Make_S_LOBBY_PLAYER_MOVE(
-    uint64 moverSessionId, float posX, float posY, float posZ, float rot, BYTE animState) {
+SendBufferRef UdpServerPacketHandler::Make_S_LOBBY_PLAYER_MOVE(uint64 moverSessionId,
+    const std::string& userId, float posX, float posY, float posZ, float rot, BYTE animState) {
     SendBufferRef buf = MakeShared<SendBuffer>(UDP_MAX_PACKET);
     BufferWriter  bw(buf->Buffer(), buf->AllocSize());
 
     UdpPacketHeader* header = bw.Reserve<UdpPacketHeader>();
     bw << moverSessionId << posX << posY << posZ << rot << animState;
+    uint16 userIdLen = static_cast<uint16>(userId.size());
+    bw << userIdLen;
+    for (uint16 i = 0; i < userIdLen; i++)
+        bw << (BYTE)userId[i];
 
     header->sessionId = moverSessionId;
     header->sequence = 0;

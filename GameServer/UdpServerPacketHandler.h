@@ -42,6 +42,7 @@ private:
     /* ÆÐÅ¶ ºô´õ */
     static SendBufferRef Make_S_UDP_HANDSHAKE_ACK(uint64 sessionId);
     static SendBufferRef Make_S_LOBBY_PLAYER_MOVE(uint64 moverSessionId,
+        const std::string& userId,
         float posX, float posY,
         float posZ, float rot,
         BYTE animState);
