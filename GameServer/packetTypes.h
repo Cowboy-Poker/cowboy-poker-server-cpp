@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 enum class PacketType
 {
@@ -31,6 +31,7 @@ enum class PacketType
     C_LOBBY_MOVE = 301, // 로비 캐릭터 이동 (TransformInfo)
     C_LOBBY_HEARTBEAT = 302, // 연결 유지 핑
     C_PURCHASE_WEAPON = 303, // 총기 구매 요청 [userIdLen:u16][userId:utf8][weaponType:i32]
+    C_GUN_SHOT_LOBBY = 305,    // 로비 총 발사 — payload 없음
     // 이름 S_UDP_HELLO 는 일부 WinSock/Windows 조합에서 전처리기와 충돌할 수 있음.
     S_UDP_HANDSHAKE_ACK = 350, // lobby_response.S_UDP_HELLO 와 동일 의미 (sessionId 응답)
     S_LOBBY_PLAYER_MOVE = 352, // 특정 플레이어 이동 브로드캐스트

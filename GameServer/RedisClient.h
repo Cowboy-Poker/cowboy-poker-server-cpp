@@ -18,7 +18,8 @@ struct PlayerRedisInfo {
     float  posZ      = 0.f;
     float  rot       = 0.f;
     int32  weapon    = 0;
-    int32  ammoType  = 0;
+    int32  ammoType  = 0;  // Redis "ammo_type" — 탄약 강화 단계 (0=기본, 상위는 추후)
+    int32  ammo      = 0;  // Redis "ammo" — 잔탄 수
 };
 
 /*----------------------------------------------------
@@ -44,8 +45,14 @@ public:
     // balance 조회
     bool GetBalance(const std::string& userId, int64& outBalance);
 
-    // balance 차감 + weapon 갱신 (원자적 HSET 2개)
-    bool PurchaseWeapon(const std::string& userId, int64 newBalance, int32 weaponType);
+    // balance 차감 + weapon 교체(기존 총기 대체) + ammo_type=0 + ammo 5탄창
+    bool PurchaseWeapon(const std::string& userId, int64 newBalance, int32 weaponType,
+                        int32 magazineAmmo, int32 ammoEnhanceLevel = 0);
+
+    // 로비 발사: ammo 1발 차감. outRemainingAmmo = 차감 후 남은 탄 수
+    bool ConsumeLobbyAmmo(const std::string& userId, int32& outRemainingAmmo);
+
+    bool SetAmmo(const std::string& userId, int32 ammo);
 
 private:
     struct redisContext* _ctx = nullptr;

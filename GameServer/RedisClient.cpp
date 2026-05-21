@@ -58,6 +58,7 @@ bool RedisClient::GetPlayerInfo(const std::string& userId, PlayerRedisInfo& outI
         else if (field == "rot")       outInfo.rot      = stof(value);
         else if (field == "weapon")    outInfo.weapon   = stoi(value);
         else if (field == "ammo_type") outInfo.ammoType = stoi(value);
+        else if (field == "ammo")      outInfo.ammo      = stoi(value);
     }
 
     freeReplyObject(reply);
@@ -78,13 +79,29 @@ bool RedisClient::GetBalance(const std::string& userId, int64& outBalance) {
     return true;
 }
 
-bool RedisClient::PurchaseWeapon(const std::string& userId, int64 newBalance, int32 weaponType) {
+bool RedisClient::SetAmmo(const std::string& userId, int32 ammo) {
+    if (!IsConnected()) return false;
+    std::string key = "user:" + userId;
+    std::string ammoStr = std::to_string(ammo);
+    redisReply* reply = reinterpret_cast<redisReply*>(
+        redisCommand(_ctx, "HSET %s ammo %s", key.c_str(), ammoStr.c_str()));
+    if (!reply) return false;
+    if (reply->type == REDIS_REPLY_ERROR)
+        cout << "[Redis] HSET ammo error: " << reply->str << endl;
+    freeReplyObject(reply);
+    return true;
+}
+
+bool RedisClient::PurchaseWeapon(const std::string& userId, int64 newBalance,
+                                 int32 weaponType, int32 magazineAmmo,
+                                 int32 ammoEnhanceLevel) {
     if (!IsConnected()) return false;
     std::string key = "user:" + userId;
     std::string balanceStr = std::to_string(newBalance);
     std::string weaponStr = std::to_string(weaponType);
+    std::string ammoTypeStr = std::to_string(ammoEnhanceLevel);
+    std::string ammoStr = std::to_string(magazineAmmo);
 
-    // balance 갱신
     redisReply* r1 = reinterpret_cast<redisReply*>(
         redisCommand(_ctx, "HSET %s balance %s", key.c_str(), balanceStr.c_str()));
     if (!r1) return false;
@@ -92,7 +109,6 @@ bool RedisClient::PurchaseWeapon(const std::string& userId, int64 newBalance, in
         cout << "[Redis] HSET balance error: " << r1->str << endl;
     freeReplyObject(r1);
 
-    // weapon 갱신
     redisReply* r2 = reinterpret_cast<redisReply*>(
         redisCommand(_ctx, "HSET %s weapon %s", key.c_str(), weaponStr.c_str()));
     if (!r2) return false;
@@ -100,5 +116,45 @@ bool RedisClient::PurchaseWeapon(const std::string& userId, int64 newBalance, in
         cout << "[Redis] HSET weapon error: " << r2->str << endl;
     freeReplyObject(r2);
 
+    redisReply* r3 = reinterpret_cast<redisReply*>(
+        redisCommand(_ctx, "HSET %s ammo_type %s", key.c_str(), ammoTypeStr.c_str()));
+    if (!r3) return false;
+    if (r3->type == REDIS_REPLY_ERROR)
+        cout << "[Redis] HSET ammo_type error: " << r3->str << endl;
+    freeReplyObject(r3);
+
+    redisReply* r4 = reinterpret_cast<redisReply*>(
+        redisCommand(_ctx, "HSET %s ammo %s", key.c_str(), ammoStr.c_str()));
+    if (!r4) return false;
+    if (r4->type == REDIS_REPLY_ERROR)
+        cout << "[Redis] HSET ammo error: " << r4->str << endl;
+    freeReplyObject(r4);
+
+    return true;
+}
+
+bool RedisClient::ConsumeLobbyAmmo(const std::string& userId, int32& outRemainingAmmo) {
+    if (!IsConnected()) return false;
+
+    PlayerRedisInfo info;
+    if (!GetPlayerInfo(userId, info))
+        return false;
+
+    if (info.weapon == 0) {
+        outRemainingAmmo = 0;
+        return false;
+    }
+
+    int32 ammo = info.ammo;
+    if (ammo <= 0) {
+        outRemainingAmmo = 0;
+        return false;
+    }
+
+    ammo -= 1;
+    if (!SetAmmo(userId, ammo))
+        return false;
+
+    outRemainingAmmo = ammo;
     return true;
 }

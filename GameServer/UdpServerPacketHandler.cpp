@@ -37,6 +37,10 @@ void UdpServerPacketHandler::HandlePacket(std::shared_ptr<UdpService> service,
         Handle_C_BUY_WEAPON(service, ctx, payload, payloadLen);
         break;
 
+    case PacketType::C_GUN_SHOT_LOBBY:
+        Handle_C_GUN_SHOT_LOBBY(service, ctx);
+        break;
+
     default:
         break;
     }
@@ -192,6 +196,7 @@ SendBufferRef UdpServerPacketHandler::Make_S_PLAYER_INFO(
     bw << info.posX << info.posY << info.posZ << info.rot;
     bw << info.weapon;
     bw << info.ammoType;
+    bw << info.ammo;
 
     uint16 nickLen = static_cast<uint16>(info.nickname.size());
     bw << nickLen;
@@ -256,20 +261,41 @@ void UdpServerPacketHandler::Handle_C_BUY_WEAPON(
         return;
     }
 
-    // 4. Redis 차감 + weapon 갱신
+    // 4. Redis 차감 + weapon 갱신 + ammo 5탄창 분량
     int64 newBalance = balance - weapon->price;
-    if (!GRedisClient.PurchaseWeapon(userId, newBalance, weaponType)) {
+    int32 ammoOnPurchase = weapon->magazineSize * 5;
+    if (!GRedisClient.PurchaseWeapon(userId, newBalance, weaponType, ammoOnPurchase)) {
         cout << "BUY_WEAPON: Redis PurchaseWeapon failed userId=" << userId << endl;
         SendBufferRef buf = Make_S_BUY_WEAPON_RESULT(ctx->sessionId, false, weaponType, balance);
         service->SendTo(ctx->sessionId, buf);
         return;
     }
 
-    // 5. 성공 응답
+    // 5. 성공 응답 + 갱신된 유저 정보(ammo 포함)
     cout << "BUY_WEAPON: success userId=" << userId
-        << " weapon=" << weaponType << " newBalance=" << newBalance << endl;
+        << " weapon=" << weaponType << " ammo=" << ammoOnPurchase
+        << " newBalance=" << newBalance << endl;
     SendBufferRef buf = Make_S_BUY_WEAPON_RESULT(ctx->sessionId, true, weaponType, newBalance);
     service->SendTo(ctx->sessionId, buf);
+
+    PlayerRedisInfo info;
+    if (GRedisClient.GetPlayerInfo(userId, info)) {
+        SendBufferRef infoBuf = Make_S_PLAYER_INFO(ctx->sessionId, info);
+        service->SendTo(ctx->sessionId, infoBuf);
+    }
+}
+
+void UdpServerPacketHandler::Handle_C_GUN_SHOT_LOBBY(
+    std::shared_ptr<UdpService> service, UdpClientContextRef ctx) {
+
+    if (ctx->userId.empty())
+        return;
+
+    int32 remainingAmmo = 0;
+    if (GRedisClient.ConsumeLobbyAmmo(ctx->userId, remainingAmmo))
+        cout << "GUN_SHOT_LOBBY: userId=" << ctx->userId << " ammo=" << remainingAmmo << endl;
+    else
+        cout << "GUN_SHOT_LOBBY: failed userId=" << ctx->userId << endl;
 }
 
 // S_BUY_WEAPON_RESULT payload:
